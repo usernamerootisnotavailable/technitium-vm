@@ -89,8 +89,8 @@
       ansible.builtin.assert:
         that:
           - >-
-            nginx_probe.status in (['200'] if nginx_verify_expect_backend | bool
-            else ['200', '502'])
+            nginx_probe.status in ([200] if nginx_verify_expect_backend | bool
+            else [200, 502])
         fail_msg: >-
           NGINX did not return an expected HTTP status through the private
           listener (got {{ nginx_probe.status | default('no response') }}).

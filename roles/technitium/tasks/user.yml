@@ -120,6 +120,13 @@
   ansible.builtin.copy:
     content: |
       # Managed by Ansible.
+      # The container harness has no logind session; the runtime directory is
+      # created by user-runtime-dir@ and the manager does not need PAM.
+      [Service]
+      PAMName=
+      Environment=XDG_RUNTIME_DIR=/run/user/{{ technitium_uid }}
+      Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{{ technitium_uid }}/bus
+
       [Install]
       WantedBy=multi-user.target
     dest: "/etc/systemd/system/user@{{ technitium_uid }}.service.d/install.conf"
