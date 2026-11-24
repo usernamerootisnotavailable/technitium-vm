@@ -27,6 +27,8 @@ provisioner:
         common_require_selinux: false
         common_ssh_allow_users:
           - ansible
+        technitium_manage_firewall: false
+        technitium_firewall_allow_dhcp: false
   playbooks:
     prepare: prepare.yml
     converge: converge.yml
