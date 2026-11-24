@@ -102,7 +102,7 @@
 - name: Create the user runtime tmpfiles entry
   ansible.builtin.copy:
     content: |
-      # {{ ansible_managed }}
+      # Managed by Ansible.
       d /run/user/{{ technitium_uid }} 0700 {{ technitium_service_user }} {{ technitium_service_group }} -
     dest: /etc/tmpfiles.d/technitium.conf
     owner: root
@@ -139,7 +139,7 @@
 - name: Make the service user manager start at boot
   ansible.builtin.copy:
     content: |
-      # {{ ansible_managed }}
+      # Managed by Ansible.
       [Install]
       WantedBy=multi-user.target
     dest: "/etc/systemd/system/user@{{ technitium_uid }}.service.d/install.conf"
