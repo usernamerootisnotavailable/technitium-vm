@@ -1,0 +1,13 @@
+---
+- name: Validate the Podman configuration
+  ansible.builtin.import_tasks: assert.yml
+
+- name: Install Podman
+  ansible.builtin.import_tasks: install.yml
+
+- name: Configure the container runtime
+  ansible.builtin.import_tasks: configure.yml
+  when: podman_manage_containers_conf | bool
+
+- name: Verify Podman
+  ansible.builtin.import_tasks: verify.yml

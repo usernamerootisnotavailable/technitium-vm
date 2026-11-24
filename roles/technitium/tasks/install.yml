@@ -1,0 +1,25 @@
+---
+- name: Install Technitium host utilities
+  ansible.builtin.dnf:
+    name:
+      - bind-utils
+      - curl
+      - iproute
+      - openssl
+      - policycoreutils-python-utils
+      - python3-cryptography
+      - unzip
+    state: present
+
+- name: Read the Podman executable
+  ansible.builtin.stat:
+    path: /usr/bin/podman
+  register: technitium_podman_path
+
+- name: Require the Podman role
+  ansible.builtin.assert:
+    that:
+      - technitium_podman_path.stat.exists
+      - technitium_podman_path.stat.executable
+    fail_msg: Run the podman role before the technitium role.
+    quiet: true

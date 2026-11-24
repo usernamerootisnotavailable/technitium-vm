@@ -1,0 +1,37 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Technitium DNS Server
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName={{ technitium_container_name }}
+Image={{ technitium_image }}:{{ technitium_version }}@{{ technitium_image_digest }}
+Network=host
+Volume={{ technitium_config_dir }}:/etc/dns:Z
+Volume={{ technitium_log_subdir }}:/var/log/technitium/dns:Z
+Environment=DNS_SERVER_ADMIN_PASSWORD_FILE=/run/secrets/{{ technitium_admin_secret_name }}
+Environment=DNS_SERVER_WEB_SERVICE_LOCAL_ADDRESSES={{ technitium_web_local_addresses | join(',') }}
+Environment=DNS_SERVER_WEB_SERVICE_HTTP_PORT={{ technitium_web_http_port }}
+Environment=DNS_SERVER_WEB_SERVICE_ENABLE_HTTPS=false
+Environment=DNS_SERVER_LOG_FOLDER_PATH=/var/log/technitium/dns
+Environment=TZ=UTC
+Secret={{ technitium_admin_secret_name }},type=mount,mode=0400
+Pull=missing
+ReadOnly=true
+DropCapability=all
+NoNewPrivileges=true
+LogDriver=journald
+HealthCmd=/usr/bin/curl -fsS http://127.0.0.1:{{ technitium_web_http_port }}/api/status
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=3
+HealthStartPeriod=30s
+
+[Service]
+Restart=always
+TimeoutStartSec=600
+UMask=0077
+
+[Install]
+WantedBy=default.target

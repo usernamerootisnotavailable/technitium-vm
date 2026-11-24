@@ -1,0 +1,29 @@
+---
+- name: Verify the DNS and DHCP host
+  hosts: dns
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Verify the AlmaLinux baseline
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: verify
+      tags:
+        - common
+        - verify
+
+    - name: Verify Technitium
+      ansible.builtin.include_role:
+        name: technitium
+        tasks_from: verify
+      tags:
+        - technitium
+        - verify
+
+    - name: Verify the console proxy
+      ansible.builtin.include_role:
+        name: nginx
+        tasks_from: verify
+      tags:
+        - nginx
+        - verify

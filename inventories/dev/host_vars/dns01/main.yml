@@ -1,0 +1,4 @@
+---
+# Host-specific overrides for the development container.
+# Add values here only when they are genuine hardware or host exceptions.
+{}

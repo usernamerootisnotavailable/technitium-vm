@@ -1,0 +1,19 @@
+---
+- name: Validate the NGINX configuration
+  ansible.builtin.import_tasks: assert.yml
+
+- name: Install and configure nginx
+  ansible.builtin.import_tasks: install.yml
+
+- name: Configure TLS certificates
+  ansible.builtin.import_tasks: tls.yml
+
+- name: Configure the reverse proxy
+  ansible.builtin.import_tasks: configure.yml
+
+- name: Configure the firewall
+  ansible.builtin.import_tasks: firewall.yml
+  when: nginx_manage_firewall | bool
+
+- name: Verify the console proxy
+  ansible.builtin.import_tasks: verify.yml

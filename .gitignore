@@ -1,0 +1,12 @@
+.cache/
+.collections/
+.molecule/
+.venv/
+collections/
+*.retry
+*.log
+*.pyc
+__pycache__/
+*.zip
+.dev/
+inventories/prod/

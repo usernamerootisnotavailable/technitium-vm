@@ -1,0 +1,72 @@
+---
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Verify the SSH service is running
+  ansible.builtin.assert:
+    that:
+      - >-
+        ansible_facts.services.get(common_ssh_service_name ~ '.service', {}).get('state', '')
+        == 'running'
+    fail_msg: The SSH service is not running.
+    quiet: true
+
+- name: Verify the SSH configuration exists
+  ansible.builtin.stat:
+    path: "{{ common_ssh_config_file }}"
+  register: common_ssh_config_stat
+
+- name: Assert the SSH configuration is present
+  ansible.builtin.assert:
+    that:
+      - common_ssh_config_stat.stat.exists
+      - common_ssh_config_stat.stat.mode | default('') == '0644'
+    fail_msg: The managed SSH configuration is missing or has the wrong mode.
+    quiet: true
+
+- name: Read the SSH hardening file
+  ansible.builtin.slurp:
+    src: "{{ common_ssh_config_file }}"
+  register: common_sshd_config
+
+- name: Assert the SSH policy is applied
+  ansible.builtin.assert:
+    that:
+      - "('PermitRootLogin ' ~ common_ssh_permit_root_login) in (common_sshd_config.content | b64decode)"
+      - "('PasswordAuthentication ' ~ common_ssh_password_authentication) in (common_sshd_config.content | b64decode)"
+      - "'AllowUsers' in (common_sshd_config.content | b64decode)"
+    fail_msg: The SSH hardening policy is incomplete.
+    quiet: true
+
+- name: Verify the managed timezone
+  ansible.builtin.command:
+    argv:
+      - readlink
+      - -f
+      - /etc/localtime
+  register: common_timezone_link
+  changed_when: false
+  check_mode: false
+
+- name: Assert the timezone is correct
+  ansible.builtin.assert:
+    that:
+      - common_timezone in common_timezone_link.stdout
+    fail_msg: "Expected timezone {{ common_timezone }}, found {{ common_timezone_link.stdout }}."
+    quiet: true
+
+- name: Verify chronyd when time management is enabled
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.services.get('chronyd.service', {}).get('state', '') == 'running'
+    fail_msg: chronyd is not running.
+    quiet: true
+  when: common_manage_time | bool
+
+- name: Verify firewalld when firewall management is enabled
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.services.get('firewalld.service', {}).get('state', '') == 'running'
+    fail_msg: firewalld is not running.
+    quiet: true
+  when: common_firewall_enabled | bool

@@ -1,0 +1,11 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated local dependencies and caches"
+paths = [
+  '''^collections/''',
+  '''^\.venv/''',
+  '''^\.molecule/''',
+  '''^\.git/''',
+]

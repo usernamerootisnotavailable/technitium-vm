@@ -1,0 +1,13 @@
+---
+podman_version: "6"
+podman_packages:
+  - aardvark-dns
+  - container-selinux
+  - containers-common
+  - fuse-overlayfs
+  - netavark
+  - passt
+  - skopeo
+  - slirp4netns
+podman_dns_bind_port: 20053
+podman_manage_containers_conf: true

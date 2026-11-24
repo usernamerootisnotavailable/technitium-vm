@@ -1,0 +1,40 @@
+---
+technitium_image: docker.io/technitium/dns-server
+technitium_version: "15.6.2"
+technitium_image_digest: ""
+technitium_container_name: technitium
+
+technitium_service_user: technitium
+technitium_service_group: technitium
+technitium_user_home: /var/lib/technitium
+technitium_config_dir: /var/lib/technitium/config
+technitium_log_dir: /var/log/technitium
+technitium_log_subdir: /var/log/technitium/dns
+technitium_subuid_start: 200000
+technitium_subgid_start: 200000
+technitium_subid_count: 65536
+
+technitium_rootless: true
+technitium_low_port_sysctl: true
+technitium_unprivileged_port_start: 53
+technitium_sysctl_file: /etc/sysctl.d/90-technitium-rootless.conf
+
+technitium_admin_password: ""
+technitium_admin_secret_name: technitium_admin_password
+
+technitium_web_http_port: 5380
+technitium_web_local_addresses:
+  - 127.0.0.1
+
+technitium_api_url: "http://127.0.0.1"
+technitium_api_port: 5380
+technitium_wait_retries: 60
+technitium_wait_delay: 2
+
+technitium_manage_firewall: true
+technitium_firewall_zone: public
+technitium_firewall_lan_cidrs: []
+technitium_firewall_allow_dhcp: false
+
+technitium_lan_interface: ""
+technitium_server_address: ""

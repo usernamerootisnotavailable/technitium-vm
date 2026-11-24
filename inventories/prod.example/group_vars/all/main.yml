@@ -1,0 +1,17 @@
+---
+deployment_environment: prod
+
+common_manage_time: true
+common_firewall_enabled: true
+common_require_selinux: true
+common_firewall_zone: public
+
+# Replace with the SSH administrator and automation source networks.
+common_firewall_allowed_ssh_cidrs:
+  - 10.20.10.0/24
+
+common_ssh_allow_users:
+  - ansible
+
+# Add real human administrators and keys outside the repository.
+common_admin_users: []

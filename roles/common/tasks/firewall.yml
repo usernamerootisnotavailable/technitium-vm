@@ -1,0 +1,50 @@
+---
+- name: Ensure firewalld is enabled and running
+  ansible.builtin.systemd_service:
+    name: firewalld
+    enabled: true
+    state: started
+
+- name: Read the current firewalld default zone
+  ansible.builtin.command:
+    argv:
+      - firewall-cmd
+      - --get-default-zone
+  register: common_firewall_current_zone
+  changed_when: false
+  check_mode: false
+
+- name: Set the firewalld default zone
+  ansible.builtin.command:
+    argv:
+      - firewall-cmd
+      - --set-default-zone
+      - "{{ common_firewall_zone }}"
+  when: common_firewall_current_zone.stdout != common_firewall_zone
+  changed_when: true
+
+- name: Allow SSH only from approved source CIDRs
+  ansible.posix.firewalld:
+    rich_rule: >-
+      rule family="{{ 'ipv6' if ':' in item else 'ipv4' }}"
+      source address="{{ item }}"
+      service name="ssh" accept
+    zone: "{{ common_firewall_zone }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ common_firewall_allowed_ssh_cidrs }}"
+  loop_control:
+    label: "{{ item }}"
+
+# Remove broad allowances only after the source-CIDR SSH rules are in place.
+- name: Remove broad firewalld services from the managed zone
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    zone: "{{ common_firewall_zone }}"
+    permanent: true
+    immediate: true
+    state: disabled
+  loop: "{{ common_firewall_remove_services }}"
+  loop_control:
+    label: "{{ item }}"

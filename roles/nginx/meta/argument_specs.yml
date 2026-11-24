@@ -1,0 +1,95 @@
+---
+argument_specs:
+  main:
+    short_description: Publish the Technitium console over private HTTPS
+    description:
+      - Terminates TLS and proxies only to the loopback Technitium console.
+      - Restricts access to explicit administrator CIDRs.
+    options:
+      nginx_version:
+        type: str
+        description: Pinned nginx major version.
+      nginx_server_name:
+        type: str
+        required: true
+        description: TLS server name and certificate common name.
+      nginx_listen_address:
+        type: str
+        description: Address nginx binds for HTTPS.
+      nginx_probe_address:
+        type: str
+        description: Local address used for verification.
+      nginx_https_port:
+        type: int
+        description: Public HTTPS port.
+      nginx_backend_url:
+        type: str
+        description: Loopback Technitium console URL.
+      nginx_backend_port:
+        type: int
+        description: Loopback console port labeled for SELinux.
+      nginx_allowed_cidrs:
+        type: list
+        elements: str
+        description: Administrator CIDRs allowed to reach the console.
+      nginx_client_max_body_size:
+        type: str
+        description: Maximum console upload or restore size.
+      nginx_tls_mode:
+        type: str
+        choices:
+          - selfsigned
+          - provided
+          - letsencrypt
+        description: Certificate source.
+      nginx_tls_cert_path:
+        type: str
+        description: Certificate path on the host.
+      nginx_tls_key_path:
+        type: str
+        description: Private key path on the host.
+      nginx_tls_certificate:
+        type: str
+        description: PEM certificate for provided mode.
+      nginx_tls_private_key:
+        type: str
+        description: PEM private key for provided mode.
+      nginx_letsencrypt_email:
+        type: str
+        description: Let's Encrypt account email.
+      nginx_cloudflare_api_token:
+        type: str
+        description: Scoped Cloudflare API token for DNS-01.
+      nginx_cloudflare_credentials_path:
+        type: str
+        description: Cloudflare credentials file path.
+      nginx_cert_name:
+        type: str
+        description: Certbot certificate name.
+      nginx_certbot_venv:
+        type: str
+        description: Certbot virtualenv path.
+      nginx_certbot_version:
+        type: str
+        description: Pinned Certbot version.
+      nginx_certbot_dns_cloudflare_version:
+        type: str
+        description: Pinned certbot-dns-cloudflare version.
+      nginx_certbot_propagation_seconds:
+        type: int
+        description: DNS propagation wait for Cloudflare.
+      nginx_certbot_renew_on_calendar:
+        type: str
+        description: Renewal timer calendar expression.
+      nginx_deploy_hook_path:
+        type: str
+        description: Certbot deploy hook path.
+      nginx_manage_firewall:
+        type: bool
+        description: Open HTTPS to administrator CIDRs.
+      nginx_firewall_zone:
+        type: str
+        description: firewalld zone for the HTTPS rule.
+      nginx_verify_expect_backend:
+        type: bool
+        description: Require the Technitium backend to be reachable during verification.

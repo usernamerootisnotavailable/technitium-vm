@@ -1,0 +1,9 @@
+---
+- name: Apply the AlmaLinux 10 baseline
+  hosts: dns
+  become: true
+  gather_facts: true
+  roles:
+    - role: common
+      tags:
+        - common

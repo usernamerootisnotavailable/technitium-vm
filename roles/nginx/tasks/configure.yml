@@ -1,0 +1,45 @@
+---
+# NGINX runs in httpd_t on AlmaLinux. Label the loopback Technitium port so
+# httpd_t can connect to it.
+- name: Label the Technitium console port for nginx
+  community.general.seport:
+    ports: "{{ nginx_backend_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  when: ansible_selinux.status | default('disabled') == 'enabled'
+
+- name: Install the Technitium console virtual host
+  ansible.builtin.template:
+    src: technitium.conf.j2
+    dest: /etc/nginx/conf.d/technitium.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Validate the complete nginx configuration
+  ansible.builtin.command:
+    argv:
+      - nginx
+      - -t
+  changed_when: false
+  check_mode: false
+
+- name: Enable and start nginx
+  ansible.builtin.systemd_service:
+    name: nginx
+    enabled: true
+    state: started
+
+# Flush after nginx is running so certificate and vhost reloads have a live
+# service, and the Certbot timer receives its daemon-reload.
+- name: Apply pending nginx and certificate handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Ensure the Certbot timer is enabled
+  ansible.builtin.systemd_service:
+    name: certbot-renew.timer
+    enabled: true
+    state: started
+  when: nginx_tls_mode == 'letsencrypt'

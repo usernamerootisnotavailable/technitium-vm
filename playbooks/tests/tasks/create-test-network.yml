@@ -1,0 +1,113 @@
+---
+- name: Read an existing test network device
+  ansible.builtin.stat:
+    path: "/sys/class/net/{{ technitium_test_veth_host }}"
+  register: technitium_test_veth_stat
+
+- name: Remove a stale test network device
+  ansible.builtin.command:
+    argv:
+      - ip
+      - link
+      - delete
+      - "{{ technitium_test_veth_host }}"
+  when: technitium_test_veth_stat.stat.exists
+  changed_when: true
+
+- name: Read an existing test network namespace
+  ansible.builtin.stat:
+    path: "/var/run/netns/{{ technitium_test_netns }}"
+  register: technitium_test_netns_stat
+
+- name: Remove a stale test network namespace
+  ansible.builtin.command:
+    argv:
+      - ip
+      - netns
+      - delete
+      - "{{ technitium_test_netns }}"
+  when: technitium_test_netns_stat.stat.exists
+  changed_when: true
+
+- name: Create the test network namespace
+  ansible.builtin.command:
+    argv:
+      - ip
+      - netns
+      - add
+      - "{{ technitium_test_netns }}"
+  changed_when: true
+
+- name: Create the test veth pair
+  ansible.builtin.command:
+    argv:
+      - ip
+      - link
+      - add
+      - "{{ technitium_test_veth_host }}"
+      - type
+      - veth
+      - peer
+      - name
+      - "{{ technitium_test_veth_client }}"
+  changed_when: true
+
+- name: Assign the server address to the test segment
+  ansible.builtin.command:
+    argv:
+      - ip
+      - addr
+      - add
+      - "{{ technitium_test_server }}/24"
+      - dev
+      - "{{ technitium_test_veth_host }}"
+  changed_when: true
+
+- name: Bring up the server side
+  ansible.builtin.command:
+    argv:
+      - ip
+      - link
+      - set
+      - "{{ technitium_test_veth_host }}"
+      - up
+  changed_when: true
+
+- name: Move the client side into the namespace
+  ansible.builtin.command:
+    argv:
+      - ip
+      - link
+      - set
+      - "{{ technitium_test_veth_client }}"
+      - netns
+      - "{{ technitium_test_netns }}"
+  changed_when: true
+
+- name: Bring up loopback in the namespace
+  ansible.builtin.command:
+    argv:
+      - ip
+      - netns
+      - exec
+      - "{{ technitium_test_netns }}"
+      - ip
+      - link
+      - set
+      - lo
+      - up
+  changed_when: true
+
+- name: Bring up the client side in the namespace
+  ansible.builtin.command:
+    argv:
+      - ip
+      - netns
+      - exec
+      - "{{ technitium_test_netns }}"
+      - ip
+      - link
+      - set
+      - "{{ technitium_test_veth_client }}"
+      - up
+  changed_when: true

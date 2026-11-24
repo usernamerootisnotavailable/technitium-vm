@@ -1,0 +1,15 @@
+---
+# This project supports a single LAN interface with the default route.
+technitium_lan_interface: ens18
+technitium_server_address: 10.20.0.5
+technitium_firewall_lan_cidrs:
+  - 10.20.0.0/24
+technitium_firewall_zone: public
+
+technitium_manage_firewall: true
+# Set true only when DHCP is intended. Scopes are configured in the web UI.
+technitium_firewall_allow_dhcp: false
+
+# Console administrators, not DNS clients.
+nginx_allowed_cidrs:
+  - 10.20.10.0/24

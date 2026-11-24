@@ -1,0 +1,3 @@
+---
+# The podman role has no long-running service of its own. Technitium owns the
+# user-scoped container handler.

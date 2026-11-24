@@ -1,0 +1,115 @@
+---
+argument_specs:
+  main:
+    short_description: Apply the AlmaLinux 10 DNS and DHCP host baseline
+    description:
+      - Configures time, access, firewalld, journald, and SELinux.
+      - All values are environment-neutral.
+    options:
+      common_timezone:
+        type: str
+        description: System timezone.
+      common_packages:
+        type: list
+        elements: str
+        description: Baseline packages.
+      common_manage_time:
+        type: bool
+        description: Configure and start chrony.
+      common_chrony_servers:
+        type: list
+        elements: str
+        description: NTP pool or server names.
+      common_firewall_enabled:
+        type: bool
+        description: Manage firewalld and its SSH rules.
+      common_firewall_zone:
+        type: str
+        description: firewalld zone to manage.
+      common_firewall_allowed_ssh_cidrs:
+        type: list
+        elements: str
+        description: Source CIDRs allowed to reach SSH.
+      common_firewall_remove_services:
+        type: list
+        elements: str
+        description: Broad firewalld services to remove from the managed zone.
+      common_require_selinux:
+        type: bool
+        description: Fail when SELinux is disabled.
+      common_admin_users:
+        type: list
+        elements: dict
+        description: Optional human administrator accounts.
+        options:
+          name:
+            type: str
+            required: true
+            description: Administrator account name.
+          groups:
+            type: list
+            elements: str
+            description: Supplementary groups.
+          ssh_keys:
+            type: list
+            elements: str
+            description: Public SSH keys to authorize.
+          shell:
+            type: str
+            description: Login shell.
+          sudo:
+            type: bool
+            description: Grant sudo access.
+          sudo_nopasswd:
+            type: bool
+            description: Grant passwordless sudo access.
+      common_ssh_service_name:
+        type: str
+        description: SSH systemd unit name.
+      common_ssh_config_file:
+        type: str
+        description: Managed sshd drop-in path.
+      common_ssh_permit_root_login:
+        type: str
+        choices:
+          - "no"
+          - prohibit-password
+        description: Root SSH policy. Password root login is forbidden.
+      common_ssh_password_authentication:
+        type: str
+        choices:
+          - "no"
+          - "yes"
+        description: Password authentication policy.
+      common_ssh_allow_users:
+        type: list
+        elements: str
+        description: Users allowed to authenticate over SSH.
+      common_ssh_max_auth_tries:
+        type: int
+        description: Maximum authentication attempts.
+      common_ssh_login_grace_time:
+        type: int
+        description: Login grace time in seconds.
+      common_ssh_client_alive_interval:
+        type: int
+        description: SSH keepalive interval in seconds.
+      common_ssh_client_alive_count_max:
+        type: int
+        description: SSH keepalive retry count.
+      common_journald_storage:
+        type: str
+        choices:
+          - persistent
+          - volatile
+          - auto
+        description: journald storage mode.
+      common_journald_system_max_use:
+        type: str
+        description: Maximum journal disk usage.
+      common_journald_rate_limit_interval:
+        type: str
+        description: journald rate limit interval.
+      common_journald_rate_limit_burst:
+        type: int
+        description: journald rate limit burst.

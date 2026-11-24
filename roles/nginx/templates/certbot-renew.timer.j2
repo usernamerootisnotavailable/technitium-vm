@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Twice-daily Let's Encrypt certificate renewal
+
+[Timer]
+OnCalendar={{ nginx_certbot_renew_on_calendar }}
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

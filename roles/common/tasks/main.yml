@@ -1,0 +1,29 @@
+---
+- name: Validate the baseline configuration
+  ansible.builtin.import_tasks: assert.yml
+
+- name: Install baseline packages
+  ansible.builtin.import_tasks: install.yml
+
+- name: Configure time
+  ansible.builtin.import_tasks: time.yml
+  when: common_manage_time | bool
+
+- name: Configure administrators
+  ansible.builtin.import_tasks: users.yml
+
+- name: Harden SSH
+  ansible.builtin.import_tasks: ssh.yml
+
+- name: Configure the firewall
+  ansible.builtin.import_tasks: firewall.yml
+  when: common_firewall_enabled | bool
+
+- name: Configure journald
+  ansible.builtin.import_tasks: journald.yml
+
+- name: Enforce SELinux
+  ansible.builtin.import_tasks: selinux.yml
+
+- name: Verify the baseline
+  ansible.builtin.import_tasks: verify.yml

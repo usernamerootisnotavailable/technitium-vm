@@ -1,0 +1,37 @@
+---
+- name: Validate the console proxy settings
+  ansible.builtin.assert:
+    that:
+      - nginx_server_name | length > 0
+      - nginx_allowed_cidrs | length > 0
+      - nginx_listen_address | length > 0
+      - nginx_backend_url is search('^http://127\\.0\\.0\\.1:')
+    fail_msg: >-
+      Set nginx_server_name and nginx_allowed_cidrs, and keep the backend on
+      loopback HTTP.
+    quiet: true
+
+- name: Validate the provided certificate mode
+  ansible.builtin.assert:
+    that:
+      - nginx_tls_certificate | length > 0
+      - nginx_tls_private_key | length > 0
+    fail_msg: >-
+      nginx_tls_mode=provided requires nginx_tls_certificate and
+      nginx_tls_private_key, usually supplied through SOPS.
+    quiet: true
+  when: nginx_tls_mode == 'provided'
+
+- name: Validate the Let's Encrypt configuration
+  ansible.builtin.assert:
+    that:
+      - nginx_letsencrypt_email is search('@')
+      - nginx_cloudflare_api_token | length > 0
+      - nginx_server_name is search('\\.')
+      - nginx_server_name is not search('\\.(local|internal|home\\.arpa|lan|test|example|invalid)$')
+    fail_msg: >-
+      Let's Encrypt mode requires a public dotted FQDN, an account email, and a
+      scoped Cloudflare API token. Internal-only names cannot be validated by
+      Let's Encrypt.
+    quiet: true
+  when: nginx_tls_mode == 'letsencrypt'

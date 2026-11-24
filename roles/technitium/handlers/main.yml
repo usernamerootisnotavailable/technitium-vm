@@ -1,0 +1,35 @@
+---
+- name: Reload the system systemd manager
+  ansible.builtin.command:
+    argv:
+      - systemctl
+      - daemon-reload
+  changed_when: true
+
+# User-scoped systemd commands require the service user's runtime directory.
+# The role starts user@<uid>.service explicitly, so the manager exists even in
+# a container environment without logind.
+- name: Reload the user systemd manager
+  ansible.builtin.command:
+    argv:
+      - systemctl
+      - --user
+      - daemon-reload
+  become: true
+  become_user: "{{ technitium_service_user }}"
+  environment:
+    HOME: "{{ technitium_user_home }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ technitium_uid }}"
+  changed_when: true
+
+- name: Reload and restart Technitium
+  ansible.builtin.systemd_service:
+    name: "{{ technitium_container_name }}.service"
+    scope: user
+    state: restarted
+    daemon_reload: true
+  become: true
+  become_user: "{{ technitium_service_user }}"
+  environment:
+    HOME: "{{ technitium_user_home }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ technitium_uid }}"

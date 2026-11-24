@@ -1,0 +1,16 @@
+---
+- name: Ensure the containers.conf drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/containers/containers.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure container logging and Aardvark DNS
+  ansible.builtin.template:
+    src: 99-technitium.conf.j2
+    dest: /etc/containers/containers.conf.d/99-technitium.conf
+    owner: root
+    group: root
+    mode: "0644"

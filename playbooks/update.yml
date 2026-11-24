@@ -1,0 +1,42 @@
+---
+- name: Apply security maintenance updates
+  hosts: dns
+  become: true
+  gather_facts: true
+  vars:
+    update_reboot: false
+  tasks:
+    - name: Apply security updates
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        security: true
+        update_only: true
+
+    - name: Check whether a reboot is required
+      ansible.builtin.command:
+        argv:
+          - dnf
+          - needs-restarting
+          - -r
+      register: update_reboot_required
+      changed_when: false
+      check_mode: false
+      failed_when: update_reboot_required.rc not in [0, 1]
+
+    - name: Reboot when explicitly requested and required
+      ansible.builtin.reboot:
+        msg: Rebooting for security updates requested by the update playbook
+        reboot_timeout: 900
+      when:
+        - update_reboot | bool
+        - update_reboot_required.rc == 1
+
+    - name: Report a deferred reboot
+      ansible.builtin.debug:
+        msg: >-
+          A reboot is recommended. Re-run with update_reboot=true when a
+          maintenance window is available.
+      when:
+        - update_reboot_required.rc == 1
+        - not (update_reboot | bool)

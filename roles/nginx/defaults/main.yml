@@ -1,0 +1,29 @@
+---
+nginx_version: "1.26"
+nginx_server_name: ""
+nginx_listen_address: "0.0.0.0"
+nginx_probe_address: "{{ nginx_listen_address if nginx_listen_address not in ['0.0.0.0', '::'] else '127.0.0.1' }}"
+nginx_https_port: 443
+nginx_backend_url: "http://127.0.0.1:5380"
+nginx_backend_port: 5380
+nginx_allowed_cidrs: []
+nginx_client_max_body_size: "512m"
+nginx_tls_mode: selfsigned
+nginx_tls_cert_path: /etc/pki/tls/certs/technitium-console.crt
+nginx_tls_key_path: /etc/pki/tls/private/technitium-console.key
+nginx_tls_certificate: ""
+nginx_tls_private_key: ""
+nginx_manage_firewall: true
+nginx_firewall_zone: public
+nginx_verify_expect_backend: true
+
+nginx_letsencrypt_email: ""
+nginx_cloudflare_api_token: ""
+nginx_cloudflare_credentials_path: /etc/letsencrypt/cloudflare.ini
+nginx_cert_name: technitium-console
+nginx_certbot_venv: /opt/certbot
+nginx_certbot_version: "5.10.0"
+nginx_certbot_dns_cloudflare_version: "5.10.0"
+nginx_certbot_propagation_seconds: 30
+nginx_certbot_renew_on_calendar: "*-*-* 00,12:00:00"
+nginx_deploy_hook_path: /usr/local/sbin/certbot-deploy-technitium

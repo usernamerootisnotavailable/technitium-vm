@@ -1,0 +1,21 @@
+---
+services:
+  dns01-dev:
+    build:
+      context: .
+    image: technitium-host/almalinux10-ansible:10
+    container_name: dns01-dev
+    hostname: dns01
+    privileged: true
+    cgroup: host
+    tmpfs:
+      - /run
+      - /run/lock
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - ${DEV_SSH_PUBKEY:?set DEV_SSH_PUBKEY}:/tmp/authorized_keys:ro
+    ports:
+      - "127.0.0.1:2222:22"
+    stop_signal: SIGRTMIN+3
+    command:
+      - /usr/sbin/init

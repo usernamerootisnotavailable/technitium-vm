@@ -1,0 +1,27 @@
+---
+- name: Set the system timezone
+  community.general.timezone:
+    name: "{{ common_timezone }}"
+
+- name: Ensure the chrony log directory exists
+  ansible.builtin.file:
+    path: /var/log/chrony
+    state: directory
+    owner: chrony
+    group: chrony
+    mode: "0750"
+
+- name: Configure chrony
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: /etc/chrony.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart chronyd
+
+- name: Enable and start chronyd
+  ansible.builtin.systemd_service:
+    name: chronyd
+    enabled: true
+    state: started

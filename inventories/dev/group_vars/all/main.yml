@@ -1,0 +1,11 @@
+---
+# Environment metadata. Never used to branch role logic.
+deployment_environment: dev
+
+# The development container cannot manage the host clock, nftables, or
+# SELinux enforcement. See docs/ENVIRONMENTS.md.
+common_manage_time: false
+common_firewall_enabled: false
+common_require_selinux: false
+common_ssh_allow_users:
+  - ansible

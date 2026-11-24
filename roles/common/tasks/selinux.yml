@@ -1,0 +1,52 @@
+---
+- name: Read the SELinux mode
+  ansible.builtin.command:
+    argv:
+      - getenforce
+  register: common_selinux_mode
+  changed_when: false
+  check_mode: false
+
+- name: Require SELinux when configured
+  ansible.builtin.assert:
+    that:
+      - common_selinux_mode.stdout in ['Enforcing', 'Permissive']
+    fail_msg: >-
+      SELinux is disabled. Set common_require_selinux to false only in the
+      documented container test harness.
+    quiet: true
+  when: common_require_selinux | bool
+
+- name: Enforce SELinux
+  ansible.posix.selinux:
+    state: enforcing
+    policy: targeted
+  when: common_selinux_mode.stdout in ['Enforcing', 'Permissive']
+
+- name: Read the enforced SELinux mode
+  ansible.builtin.command:
+    argv:
+      - getenforce
+  register: common_selinux_final
+  changed_when: false
+  check_mode: false
+  when:
+    - not ansible_check_mode
+    - common_selinux_mode.stdout in ['Enforcing', 'Permissive']
+
+- name: Assert SELinux is enforcing
+  ansible.builtin.assert:
+    that:
+      - common_selinux_final.stdout == 'Enforcing'
+    fail_msg: SELinux did not enter enforcing mode.
+    quiet: true
+  when:
+    - not ansible_check_mode
+    - common_selinux_mode.stdout in ['Enforcing', 'Permissive']
+
+- name: Report disabled SELinux in the development harness
+  ansible.builtin.debug:
+    msg: >-
+      SELinux is disabled on this host. The enforcement path is verified only
+      on a real AlmaLinux 10 host.
+  when: common_selinux_mode.stdout == 'Disabled'

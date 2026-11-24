@@ -1,0 +1,9 @@
+---
+- name: Configure the private console proxy
+  hosts: dns
+  become: true
+  gather_facts: true
+  roles:
+    - role: nginx
+      tags:
+        - nginx

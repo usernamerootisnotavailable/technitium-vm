@@ -1,0 +1,9 @@
+---
+- name: Configure Technitium DNS and DHCP
+  hosts: dns
+  become: true
+  gather_facts: true
+  roles:
+    - role: technitium
+      tags:
+        - technitium

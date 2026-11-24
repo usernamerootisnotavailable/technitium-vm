@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  namespace: technitium_host
+  role_name: nginx
+  author: Technitium Ansible Maintainers
+  description: Private TLS reverse proxy for the Technitium console
+  license: MIT
+  min_ansible_version: "2.22"
+  platforms:
+    - name: AlmaLinux
+      versions:
+        - "10"
+  galaxy_tags:
+    - nginx
+    - tls
+    - security
+dependencies: []

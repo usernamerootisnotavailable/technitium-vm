@@ -1,0 +1,19 @@
+---
+# Full convergence for one AlmaLinux 10 DNS/DHCP host.
+# Run with an explicit inventory:
+#   ansible-playbook -i inventories/dev/hosts.yml site.yml
+- name: Apply the AlmaLinux 10 baseline
+  import_playbook: playbooks/common.yml
+
+- name: Configure the rootless container runtime
+  import_playbook: playbooks/podman.yml
+
+- name: Configure Technitium DNS and DHCP
+  import_playbook: playbooks/technitium.yml
+
+# NGINX fronts the loopback-only Technitium console over TLS.
+- name: Configure the private console proxy
+  import_playbook: playbooks/nginx.yml
+
+- name: Verify the DNS and DHCP host
+  import_playbook: playbooks/verify.yml

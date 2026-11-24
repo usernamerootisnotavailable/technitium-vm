@@ -1,0 +1,13 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    nginx_server_name: dns01.mol.test
+    nginx_verify_expect_backend: false
+  tasks:
+    - name: Verify the nginx role
+      ansible.builtin.include_role:
+        name: nginx
+        tasks_from: verify

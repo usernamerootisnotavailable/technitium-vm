@@ -1,0 +1,111 @@
+---
+- name: Create the Certbot virtualenv
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -m
+      - venv
+      - "{{ nginx_certbot_venv }}"
+    creates: "{{ nginx_certbot_venv }}/bin/pip"
+  changed_when: true
+
+- name: Install pinned Certbot packages
+  ansible.builtin.pip:
+    name:
+      - "certbot=={{ nginx_certbot_version }}"
+      - "certbot-dns-cloudflare=={{ nginx_certbot_dns_cloudflare_version }}"
+    virtualenv: "{{ nginx_certbot_venv }}"
+    state: present
+
+- name: Ensure the Let's Encrypt configuration directory exists
+  ansible.builtin.file:
+    path: /etc/letsencrypt
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Configure the Cloudflare DNS credentials
+  ansible.builtin.template:
+    src: cloudflare.ini.j2
+    dest: "{{ nginx_cloudflare_credentials_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Install the certificate deploy hook
+  ansible.builtin.template:
+    src: certbot-deploy-technitium.sh.j2
+    dest: "{{ nginx_deploy_hook_path }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Check for an existing certificate
+  ansible.builtin.stat:
+    path: /etc/letsencrypt/live/{{ nginx_cert_name }}/fullchain.pem
+  register: nginx_letsencrypt_certificate
+
+- name: Issue the Let's Encrypt certificate
+  ansible.builtin.command:
+    argv:
+      - "{{ nginx_certbot_venv }}/bin/certbot"
+      - certonly
+      - --dns-cloudflare
+      - --dns-cloudflare-credentials
+      - "{{ nginx_cloudflare_credentials_path }}"
+      - --dns-cloudflare-propagation-seconds
+      - "{{ nginx_certbot_propagation_seconds }}"
+      - --email
+      - "{{ nginx_letsencrypt_email }}"
+      - --agree-tos
+      - --non-interactive
+      - --cert-name
+      - "{{ nginx_cert_name }}"
+      - --deploy-hook
+      - "{{ nginx_deploy_hook_path }}"
+      - -d
+      - "{{ nginx_server_name }}"
+  when: not nginx_letsencrypt_certificate.stat.exists
+  changed_when: true
+  no_log: true
+
+- name: Install the issued certificate chain
+  ansible.builtin.copy:
+    src: "/etc/letsencrypt/live/{{ nginx_cert_name }}/fullchain.pem"
+    dest: "{{ nginx_tls_cert_path }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Install the issued private key
+  ansible.builtin.copy:
+    src: "/etc/letsencrypt/live/{{ nginx_cert_name }}/privkey.pem"
+    dest: "{{ nginx_tls_key_path }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Reload nginx
+  no_log: true
+
+- name: Install the Certbot renewal service
+  ansible.builtin.template:
+    src: certbot-renew.service.j2
+    dest: /etc/systemd/system/certbot-renew.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd and restart the Certbot timer
+
+- name: Install the Certbot renewal timer
+  ansible.builtin.template:
+    src: certbot-renew.timer.j2
+    dest: /etc/systemd/system/certbot-renew.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd and restart the Certbot timer

@@ -1,0 +1,10 @@
+---
+- name: Install the pinned Podman major version
+  ansible.builtin.dnf:
+    name: podman
+    state: present
+
+- name: Install rootless networking and storage helpers
+  ansible.builtin.dnf:
+    name: "{{ podman_packages }}"
+    state: present

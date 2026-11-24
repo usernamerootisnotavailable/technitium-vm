@@ -1,0 +1,25 @@
+---
+- name: Validate the Technitium configuration
+  ansible.builtin.import_tasks: assert.yml
+
+- name: Install Technitium runtime dependencies
+  ansible.builtin.import_tasks: install.yml
+
+- name: Configure the service account and directories
+  ansible.builtin.import_tasks: user.yml
+
+- name: Configure the rootless low-port exception
+  ansible.builtin.import_tasks: sysctl.yml
+
+- name: Create the bootstrap admin secret
+  ansible.builtin.import_tasks: secret.yml
+
+- name: Configure the Quadlet container
+  ansible.builtin.import_tasks: container.yml
+
+- name: Configure the firewall
+  ansible.builtin.import_tasks: firewall.yml
+  when: technitium_manage_firewall | bool
+
+- name: Verify Technitium
+  ansible.builtin.import_tasks: verify.yml

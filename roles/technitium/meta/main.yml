@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  namespace: technitium_host
+  role_name: technitium
+  author: Technitium Ansible Maintainers
+  description: Technitium DNS Server and DHCP in rootless Podman
+  license: MIT
+  min_ansible_version: "2.22"
+  platforms:
+    - name: AlmaLinux
+      versions:
+        - "10"
+  galaxy_tags:
+    - dns
+    - dhcp
+    - containers
+dependencies: []

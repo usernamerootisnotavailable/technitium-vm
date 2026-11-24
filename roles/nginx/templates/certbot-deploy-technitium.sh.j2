@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+set -euo pipefail
+
+cert_dir="/etc/letsencrypt/live/{{ nginx_cert_name }}"
+install -d -m 0755 -o root -g root "$(dirname "{{ nginx_tls_cert_path }}")"
+install -d -m 0700 -o root -g root "$(dirname "{{ nginx_tls_key_path }}")"
+install -m 0644 "${cert_dir}/fullchain.pem" "{{ nginx_tls_cert_path }}"
+install -m 0600 "${cert_dir}/privkey.pem" "{{ nginx_tls_key_path }}"
+restorecon -R "{{ nginx_tls_cert_path }}" "{{ nginx_tls_key_path }}" 2>/dev/null || true
+
+if systemctl is-active --quiet nginx; then
+  systemctl reload nginx
+fi

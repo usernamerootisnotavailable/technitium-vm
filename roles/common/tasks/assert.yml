@@ -1,0 +1,35 @@
+---
+- name: Verify the supported platform
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "AlmaLinux"
+      - ansible_distribution_major_version | int == 10
+    fail_msg: Only AlmaLinux 10 is supported.
+    quiet: true
+
+- name: Require SSH source CIDRs when firewalld is managed
+  ansible.builtin.assert:
+    that:
+      - common_firewall_allowed_ssh_cidrs | length > 0
+    fail_msg: >-
+      Set common_firewall_allowed_ssh_cidrs before enabling firewalld.
+      An empty list would leave SSH exposure undefined.
+  when: common_firewall_enabled | bool
+
+- name: Require at least one SSH-allowed user
+  ansible.builtin.assert:
+    that:
+      - common_ssh_allow_users | length > 0
+    fail_msg: Set common_ssh_allow_users to the automation and administrator accounts.
+    quiet: true
+
+- name: Validate administrator definitions
+  ansible.builtin.assert:
+    that:
+      - item.name is defined
+      - item.name | length > 0
+    fail_msg: Every common_admin_users entry needs a name.
+    quiet: true
+  loop: "{{ common_admin_users }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed') }}"

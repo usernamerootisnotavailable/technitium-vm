@@ -1,0 +1,164 @@
+---
+- name: Verify the running Technitium service
+  when: not ansible_check_mode
+  block:
+    - name: Read the service account identity for verification
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ technitium_service_user }}"
+
+    - name: Record the service account IDs for verification
+      ansible.builtin.set_fact:
+        technitium_uid: "{{ ansible_facts.getent_passwd[technitium_service_user][1] }}"
+        technitium_gid: "{{ ansible_facts.getent_passwd[technitium_service_user][2] }}"
+
+    - name: Read the Technitium user service state
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - --user
+          - show
+          - "{{ technitium_container_name }}.service"
+          - -p
+          - ActiveState
+          - --value
+      become: true
+      become_user: "{{ technitium_service_user }}"
+      environment:
+        HOME: "{{ technitium_user_home }}"
+        XDG_RUNTIME_DIR: "/run/user/{{ technitium_uid }}"
+      register: technitium_service_state
+      changed_when: false
+      check_mode: false
+
+    - name: Assert the Technitium service is active
+      ansible.builtin.assert:
+        that:
+          - technitium_service_state.stdout == 'active'
+        fail_msg: The Technitium user service is not active.
+        quiet: true
+
+    - name: Read the Technitium API status
+      ansible.builtin.uri:
+        url: "{{ technitium_api_url }}:{{ technitium_api_port }}/api/status"
+        method: GET
+        status_code: 200
+      register: technitium_verify_status
+      changed_when: false
+
+    - name: Assert the Technitium API is healthy
+      ansible.builtin.assert:
+        that:
+          - technitium_verify_status.json.status == 'ok'
+        fail_msg: The Technitium API did not report a healthy status.
+        quiet: true
+
+    - name: Read listening sockets
+      ansible.builtin.command:
+        argv:
+          - ss
+          - -lunpt
+      register: technitium_listeners
+      changed_when: false
+      check_mode: false
+
+    - name: Assert DNS is listening on the host wildcard
+      ansible.builtin.assert:
+        that:
+          - >-
+            '0.0.0.0:53' in technitium_listeners.stdout
+            or '*:53' in technitium_listeners.stdout
+            or '[::]:53' in technitium_listeners.stdout
+        fail_msg: Technitium is not listening on the host DNS port 53.
+        quiet: true
+
+    - name: Assert the web console is loopback-only
+      ansible.builtin.assert:
+        that:
+          - "'127.0.0.1:{{ technitium_web_http_port }}' in technitium_listeners.stdout"
+          - "'0.0.0.0:{{ technitium_web_http_port }}' not in technitium_listeners.stdout"
+        fail_msg: The Technitium web console must be bound to loopback only.
+        quiet: true
+
+    - name: Read the rootless runtime state
+      ansible.builtin.command:
+        argv:
+          - podman
+          - info
+          - --format
+          - json
+      become: true
+      become_user: "{{ technitium_service_user }}"
+      environment:
+        HOME: "{{ technitium_user_home }}"
+        XDG_RUNTIME_DIR: "/run/user/{{ technitium_uid }}"
+        XDG_CONFIG_HOME: "{{ technitium_user_home }}/.config"
+      register: technitium_podman_info
+      changed_when: false
+      check_mode: false
+
+    - name: Assert Podman is running rootless
+      ansible.builtin.assert:
+        that:
+          - (technitium_podman_info.stdout | from_json).host.security.rootless | bool
+        fail_msg: Technitium is not running under rootless Podman.
+        quiet: true
+
+    - name: Read the effective low-port sysctl
+      ansible.builtin.command:
+        argv:
+          - sysctl
+          - -n
+          - net.ipv4.ip_unprivileged_port_start
+      register: technitium_verify_port_floor
+      changed_when: false
+      check_mode: false
+
+    - name: Assert the rootless low-port exception is active
+      ansible.builtin.assert:
+        that:
+          - technitium_verify_port_floor.stdout | int == technitium_unprivileged_port_start | int
+        fail_msg: The rootless low-port sysctl is not active.
+        quiet: true
+
+    - name: Query the DNS firewall service
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --zone
+          - "{{ technitium_firewall_zone }}"
+          - --query-service=dns
+      register: technitium_dns_firewall
+      changed_when: false
+      check_mode: false
+      failed_when: technitium_dns_firewall.rc not in [0, 1]
+      when: technitium_manage_firewall | bool
+
+    - name: Assert DNS is allowed by firewalld
+      ansible.builtin.assert:
+        that:
+          - technitium_dns_firewall.rc == 0
+        fail_msg: firewalld does not allow the DNS service in the managed zone.
+        quiet: true
+      when: technitium_manage_firewall | bool
+
+    - name: Query the DHCP firewall service
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --zone
+          - "{{ technitium_firewall_zone }}"
+          - --query-service=dhcp
+      register: technitium_dhcp_firewall
+      changed_when: false
+      check_mode: false
+      failed_when: technitium_dhcp_firewall.rc not in [0, 1]
+      when: technitium_manage_firewall | bool
+
+    - name: Assert the DHCP firewall state matches the inventory flag
+      ansible.builtin.assert:
+        that:
+          - (technitium_dhcp_firewall.rc == 0) == (technitium_firewall_allow_dhcp | bool)
+        fail_msg: DHCP firewall exposure does not match technitium_firewall_allow_dhcp.
+        quiet: true
+      when: technitium_manage_firewall | bool

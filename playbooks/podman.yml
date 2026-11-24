@@ -1,0 +1,9 @@
+---
+- name: Configure the rootless container runtime
+  hosts: dns
+  become: true
+  gather_facts: true
+  roles:
+    - role: podman
+      tags:
+        - podman

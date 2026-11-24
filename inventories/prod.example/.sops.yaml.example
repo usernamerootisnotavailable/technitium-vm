@@ -1,0 +1,6 @@
+---
+# Copy this file to <private-inventory>/.sops.yaml and replace the recipient.
+# Never place an age private key in an inventory directory or in the repository.
+creation_rules:
+  - path_regex: group_vars/dns/secrets\.sops\.yml$
+    age: age1REPLACE_WITH_PRODUCTION_RECIPIENT

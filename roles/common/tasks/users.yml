@@ -1,0 +1,46 @@
+---
+- name: Create administrator accounts
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups | default([]) }}"
+    append: true
+    shell: "{{ item.shell | default('/bin/bash') }}"
+    create_home: true
+    state: present
+  loop: "{{ common_admin_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Install administrator SSH keys
+  ansible.posix.authorized_key:
+    user: "{{ item.name }}"
+    key: "{{ item.ssh_keys | join('\n') }}"
+    exclusive: false
+  loop: "{{ common_admin_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - item.ssh_keys is defined
+    - item.ssh_keys | length > 0
+
+- name: Grant administrator sudo access
+  ansible.builtin.template:
+    src: sudoers.j2
+    dest: "/etc/sudoers.d/90-{{ item.name }}"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+  loop: "{{ common_admin_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.sudo | default(true) | bool
+
+- name: Remove sudo access when disabled
+  ansible.builtin.file:
+    path: "/etc/sudoers.d/90-{{ item.name }}"
+    state: absent
+  loop: "{{ common_admin_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: not (item.sudo | default(true) | bool)

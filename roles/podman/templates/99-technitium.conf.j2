@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+# Keep Aardvark DNS away from port 53. Technitium owns 53 on the host network.
+[engine]
+events_logger = "journald"
+
+[network]
+dns_bind_port = {{ podman_dns_bind_port }}

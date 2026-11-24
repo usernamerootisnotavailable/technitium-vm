@@ -1,0 +1,50 @@
+---
+- name: Configure Let's Encrypt
+  ansible.builtin.import_tasks: letsencrypt.yml
+  when: nginx_tls_mode == 'letsencrypt'
+
+- name: Generate the self-signed private key
+  community.crypto.openssl_privatekey:
+    path: "{{ nginx_tls_key_path }}"
+    type: RSA
+    size: 3072
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Reload nginx
+  when: nginx_tls_mode == 'selfsigned'
+
+- name: Generate the self-signed certificate
+  community.crypto.x509_certificate:
+    provider: selfsigned
+    path: "{{ nginx_tls_cert_path }}"
+    privatekey_path: "{{ nginx_tls_key_path }}"
+    common_name: "{{ nginx_server_name }}"
+    subject_alt_name:
+      - "DNS:{{ nginx_server_name }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+  when: nginx_tls_mode == 'selfsigned'
+
+- name: Install the provided certificate
+  ansible.builtin.copy:
+    content: "{{ nginx_tls_certificate }}"
+    dest: "{{ nginx_tls_cert_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+  when: nginx_tls_mode == 'provided'
+
+- name: Install the provided private key
+  ansible.builtin.copy:
+    content: "{{ nginx_tls_private_key }}"
+    dest: "{{ nginx_tls_key_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Reload nginx
+  when: nginx_tls_mode == 'provided'
+  no_log: true

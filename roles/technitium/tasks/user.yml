@@ -1,0 +1,158 @@
+---
+- name: Create the Technitium group
+  ansible.builtin.group:
+    name: "{{ technitium_service_group }}"
+    system: true
+    state: present
+
+- name: Create the Technitium service account
+  ansible.builtin.user:
+    name: "{{ technitium_service_user }}"
+    group: "{{ technitium_service_group }}"
+    home: "{{ technitium_user_home }}"
+    create_home: true
+    shell: /usr/sbin/nologin
+    system: true
+    state: present
+
+- name: Read the service account identity
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ technitium_service_user }}"
+
+- name: Record the service account IDs
+  ansible.builtin.set_fact:
+    technitium_uid: "{{ ansible_facts.getent_passwd[technitium_service_user][1] }}"
+    technitium_gid: "{{ ansible_facts.getent_passwd[technitium_service_user][2] }}"
+
+- name: Allocate subordinate UIDs
+  ansible.builtin.lineinfile:
+    path: /etc/subuid
+    regexp: "^{{ technitium_service_user }}:"
+    line: "{{ technitium_service_user }}:{{ technitium_subuid_start }}:{{ technitium_subid_count }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Allocate subordinate GIDs
+  ansible.builtin.lineinfile:
+    path: /etc/subgid
+    regexp: "^{{ technitium_service_user }}:"
+    line: "{{ technitium_service_user }}:{{ technitium_subgid_start }}:{{ technitium_subid_count }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Ensure the service home exists
+  ansible.builtin.file:
+    path: "{{ technitium_user_home }}"
+    state: directory
+    owner: "{{ technitium_service_user }}"
+    group: "{{ technitium_service_group }}"
+    mode: "0700"
+
+- name: Ensure the Podman configuration directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ technitium_service_user }}"
+    group: "{{ technitium_service_group }}"
+    mode: "0700"
+  loop:
+    - "{{ technitium_user_home }}/.config"
+    - "{{ technitium_user_home }}/.config/containers"
+    - "{{ technitium_user_home }}/.config/containers/systemd"
+    - "{{ technitium_user_home }}/.local"
+    - "{{ technitium_user_home }}/.local/share"
+    - "{{ technitium_user_home }}/.local/share/containers"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Ensure the Technitium configuration directory exists
+  ansible.builtin.file:
+    path: "{{ technitium_config_dir }}"
+    state: directory
+    owner: "{{ technitium_service_user }}"
+    group: "{{ technitium_service_group }}"
+    mode: "0700"
+
+- name: Ensure the Technitium log directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ technitium_service_user }}"
+    group: "{{ technitium_service_group }}"
+    mode: "0750"
+  loop:
+    - "{{ technitium_log_dir }}"
+    - "{{ technitium_log_subdir }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Ensure the user runtime directory exists now
+  ansible.builtin.file:
+    path: "/run/user/{{ technitium_uid }}"
+    state: directory
+    owner: "{{ technitium_service_user }}"
+    group: "{{ technitium_service_group }}"
+    mode: "0700"
+
+- name: Create the user runtime tmpfiles entry
+  ansible.builtin.copy:
+    content: |
+      # {{ ansible_managed }}
+      d /run/user/{{ technitium_uid }} 0700 {{ technitium_service_user }} {{ technitium_service_group }} -
+    dest: /etc/tmpfiles.d/technitium.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Ensure the linger directory exists
+  ansible.builtin.file:
+    path: /var/lib/systemd/linger
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Persist the service account linger flag
+  ansible.builtin.copy:
+    content: ""
+    dest: "/var/lib/systemd/linger/{{ technitium_service_user }}"
+    owner: root
+    group: root
+    mode: "0644"
+    force: false
+
+# user@.service is static on AlmaLinux. A drop-in install section lets the
+# container harness start it deterministically without relying on logind.
+- name: Ensure the user manager drop-in directory exists
+  ansible.builtin.file:
+    path: "/etc/systemd/system/user@{{ technitium_uid }}.service.d"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Make the service user manager start at boot
+  ansible.builtin.copy:
+    content: |
+      # {{ ansible_managed }}
+      [Install]
+      WantedBy=multi-user.target
+    dest: "/etc/systemd/system/user@{{ technitium_uid }}.service.d/install.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload the system systemd manager
+
+- name: Apply the systemd drop-in before starting the user manager
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start the service user's systemd manager
+  ansible.builtin.systemd_service:
+    name: "user@{{ technitium_uid }}.service"
+    enabled: true
+    state: started

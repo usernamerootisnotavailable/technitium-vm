@@ -1,0 +1,97 @@
+---
+- name: Verify the nginx service
+  when: not ansible_check_mode
+  block:
+    - name: Read the nginx version
+      ansible.builtin.command:
+        argv:
+          - nginx
+          - -v
+      register: nginx_version_output
+      changed_when: false
+      check_mode: false
+
+    - name: Assert the pinned nginx major version is installed
+      ansible.builtin.assert:
+        that:
+          - >-
+            ('nginx/' ~ nginx_version) in
+            (nginx_version_output.stdout ~ nginx_version_output.stderr)
+        fail_msg: >-
+          Expected nginx {{ nginx_version }}, found
+          "{{ nginx_version_output.stdout }}{{ nginx_version_output.stderr }}".
+        quiet: true
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert nginx is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services.get('nginx.service', {}).get('state', '') == 'running'
+        fail_msg: nginx is not running.
+        quiet: true
+
+    - name: Verify the certificate and key modes
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: nginx_tls_files
+      loop:
+        - "{{ nginx_tls_cert_path }}"
+        - "{{ nginx_tls_key_path }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Assert the TLS material is present with restrictive modes
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.mode == '0600' or item.stat.mode == '0644'
+        fail_msg: TLS material is missing or has an unsafe mode.
+        quiet: true
+      loop: "{{ nginx_tls_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Read the Certbot timer state
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - is-active
+          - certbot-renew.timer
+      register: nginx_certbot_timer
+      changed_when: false
+      check_mode: false
+      failed_when: nginx_certbot_timer.rc not in [0, 3]
+      when: nginx_tls_mode == 'letsencrypt'
+
+    - name: Assert the Certbot timer is active
+      ansible.builtin.assert:
+        that:
+          - nginx_certbot_timer.stdout == 'active'
+        fail_msg: The Certbot renewal timer is not active.
+        quiet: true
+      when: nginx_tls_mode == 'letsencrypt'
+
+    - name: Probe the console through nginx
+      ansible.builtin.uri:
+        url: "https://{{ nginx_probe_address }}:{{ nginx_https_port }}/api/status"
+        method: GET
+        validate_certs: false
+        status_code:
+          - 200
+          - 502
+        return_content: false
+      register: nginx_probe
+      changed_when: false
+
+    - name: Assert the console proxy responds
+      ansible.builtin.assert:
+        that:
+          - >-
+            nginx_probe.status in (['200'] if nginx_verify_expect_backend | bool
+            else ['200', '502'])
+        fail_msg: >-
+          NGINX did not return an expected HTTP status through the private
+          listener (got {{ nginx_probe.status | default('no response') }}).
+        quiet: true

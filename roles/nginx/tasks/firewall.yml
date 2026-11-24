@@ -1,0 +1,14 @@
+---
+- name: Allow HTTPS from approved administrator CIDRs
+  ansible.posix.firewalld:
+    rich_rule: >-
+      rule family="{{ 'ipv6' if ':' in item else 'ipv4' }}"
+      source address="{{ item }}"
+      service name="https" accept
+    zone: "{{ nginx_firewall_zone }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ nginx_allowed_cidrs }}"
+  loop_control:
+    label: "{{ item }}"

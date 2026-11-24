@@ -1,0 +1,13 @@
+---
+# Application settings are configured in the Technitium web UI. This inventory
+# contains only install-time and server-level values.
+technitium_admin_password: "{{ secret_technitium_admin_password | mandatory }}"
+
+technitium_manage_firewall: false
+technitium_firewall_allow_dhcp: false
+
+nginx_allowed_cidrs:
+  - 127.0.0.1/32
+nginx_server_name: dns01.lab.test
+nginx_tls_mode: selfsigned
+nginx_manage_firewall: false

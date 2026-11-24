@@ -1,0 +1,6 @@
+---
+nginx_server_name: dns01.example.com
+nginx_tls_mode: letsencrypt
+nginx_letsencrypt_email: admin@example.com
+nginx_cloudflare_api_token: "{{ secret_cloudflare_dns_api_token | mandatory }}"
+nginx_manage_firewall: true

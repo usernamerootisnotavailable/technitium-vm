@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Renew Let's Encrypt certificates
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart={{ nginx_certbot_venv }}/bin/certbot renew --quiet --deploy-hook {{ nginx_deploy_hook_path }}

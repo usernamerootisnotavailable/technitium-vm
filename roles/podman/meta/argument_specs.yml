@@ -1,0 +1,21 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure the rootless Podman runtime
+    description:
+      - Installs the pinned Podman major version and rootless networking helpers.
+      - Disables the Aardvark DNS listener on port 53 so it cannot conflict with Technitium.
+    options:
+      podman_version:
+        type: str
+        description: Pinned Podman major version.
+      podman_packages:
+        type: list
+        elements: str
+        description: Additional rootless networking and storage packages.
+      podman_dns_bind_port:
+        type: int
+        description: Port used by Aardvark DNS for container networks.
+      podman_manage_containers_conf:
+        type: bool
+        description: Write the containers.conf drop-in.

@@ -1,0 +1,116 @@
+---
+- name: Verify the supported platform
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "AlmaLinux"
+      - ansible_distribution_major_version | int == 10
+    fail_msg: Only AlmaLinux 10 is supported.
+    quiet: true
+
+- name: Require the rootless runtime
+  ansible.builtin.assert:
+    that:
+      - technitium_rootless | bool
+      - technitium_low_port_sysctl | bool
+    fail_msg: >-
+      This repository targets rootless Podman with the documented low-port
+      sysctl exception. Do not silently switch to a rootful runtime.
+    quiet: true
+
+- name: Validate the pinned image reference
+  ansible.builtin.assert:
+    that:
+      - technitium_version is match('^[0-9]+\.[0-9]+\.[0-9]+$')
+      - technitium_image_digest is match('^sha256:[0-9a-f]{64}$')
+    fail_msg: Pin technitium_version and technitium_image_digest in inventory.
+    quiet: true
+
+- name: Validate the bootstrap admin password
+  ansible.builtin.assert:
+    that:
+      - technitium_admin_password | length >= 16
+    fail_msg: Provide a bootstrap admin password of at least 16 characters.
+    quiet: true
+
+- name: Require a loopback-only web console
+  ansible.builtin.assert:
+    that:
+      - item in ['127.0.0.1', '::1']
+    fail_msg: >-
+      technitium_web_local_addresses must remain loopback. NGINX is the only
+      supported console path.
+    quiet: true
+  loop: "{{ technitium_web_local_addresses }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Require the API port to match the web console port
+  ansible.builtin.assert:
+    that:
+      - technitium_web_http_port | int == technitium_api_port | int
+      - technitium_web_http_port | int > 1024
+    fail_msg: technitium_web_http_port must match technitium_api_port and be unprivileged.
+    quiet: true
+
+- name: Validate the LAN model
+  when: technitium_manage_firewall | bool
+  block:
+    - name: Require one LAN CIDR and a server address
+      ansible.builtin.assert:
+        that:
+          - technitium_firewall_lan_cidrs | length > 0
+          - technitium_lan_interface | length > 0
+          - technitium_server_address | length > 0
+        fail_msg: >-
+          Set technitium_firewall_lan_cidrs, technitium_lan_interface, and
+          technitium_server_address before managing the LAN firewall.
+        quiet: true
+
+    - name: Validate the LAN CIDRs
+      ansible.builtin.assert:
+        that:
+          - item | is_network
+        fail_msg: "Invalid LAN CIDR: {{ item }}"
+        quiet: true
+      loop: "{{ technitium_firewall_lan_cidrs }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Require a private LAN server address
+      ansible.builtin.assert:
+        that:
+          - technitium_server_address | is_private_address
+          - technitium_server_address | ip_in_network(item)
+        fail_msg: >-
+          technitium_server_address must be a private address inside each
+          configured LAN CIDR.
+        quiet: true
+      loop: "{{ technitium_firewall_lan_cidrs }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Read the LAN interface addresses
+      ansible.builtin.command:
+        argv:
+          - ip
+          - -4
+          - -o
+          - addr
+          - show
+          - dev
+          - "{{ technitium_lan_interface }}"
+      register: technitium_lan_addresses
+      changed_when: false
+      check_mode: false
+
+    - name: Require the server address on the LAN interface
+      ansible.builtin.assert:
+        that:
+          - technitium_server_address in technitium_lan_addresses.stdout
+          - (ansible_facts.default_ipv4 | default({})).interface | default('') == technitium_lan_interface
+        fail_msg: >-
+          The server address must be configured on technitium_lan_interface and
+          that interface must carry the default route. This project supports a
+          single LAN interface; use a dedicated firewalld zone before adding
+          more interfaces.
+        quiet: true

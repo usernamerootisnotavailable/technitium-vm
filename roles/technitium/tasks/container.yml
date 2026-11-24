@@ -1,0 +1,42 @@
+---
+- name: Install the Technitium Quadlet unit
+  ansible.builtin.template:
+    src: technitium.container.j2
+    dest: "{{ technitium_user_home }}/.config/containers/systemd/{{ technitium_container_name }}.container"
+    owner: "{{ technitium_service_user }}"
+    group: "{{ technitium_service_group }}"
+    mode: "0600"
+  register: technitium_quadlet
+  notify:
+    - Reload the user systemd manager
+    - Reload and restart Technitium
+
+# The generated Quadlet unit must exist before the first start. The restart
+# handler starts it if it was not already running.
+- name: Apply pending systemd and container changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Start the Technitium container
+  ansible.builtin.systemd_service:
+    name: "{{ technitium_container_name }}.service"
+    scope: user
+    state: started
+  become: true
+  become_user: "{{ technitium_service_user }}"
+  environment:
+    HOME: "{{ technitium_user_home }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ technitium_uid }}"
+
+- name: Wait for the Technitium API
+  ansible.builtin.uri:
+    url: "{{ technitium_api_url }}:{{ technitium_api_port }}/api/status"
+    method: GET
+    status_code: 200
+    return_content: false
+  register: technitium_status
+  until: technitium_status.status == 200
+  retries: "{{ technitium_wait_retries }}"
+  delay: "{{ technitium_wait_delay }}"
+  changed_when: false
+  check_mode: false
+  when: not ansible_check_mode

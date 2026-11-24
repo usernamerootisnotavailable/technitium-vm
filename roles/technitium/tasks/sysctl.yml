@@ -1,0 +1,29 @@
+---
+# Rootless Podman cannot bind 53/67 in the host network namespace without a
+# lower unprivileged port floor. This is the one intentional host-wide
+# security trade-off for DHCP support. It is documented in
+# docs/components/technitium.md and enforced by the policy script.
+- name: Lower the unprivileged port floor for rootless DNS and DHCP
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_unprivileged_port_start
+    value: "{{ technitium_unprivileged_port_start }}"
+    sysctl_file: "{{ technitium_sysctl_file }}"
+    reload: true
+    state: present
+
+- name: Read the effective unprivileged port floor
+  ansible.builtin.command:
+    argv:
+      - sysctl
+      - -n
+      - net.ipv4.ip_unprivileged_port_start
+  register: technitium_port_floor
+  changed_when: false
+  check_mode: false
+
+- name: Assert the low-port exception is active
+  ansible.builtin.assert:
+    that:
+      - technitium_port_floor.stdout | int == technitium_unprivileged_port_start | int
+    fail_msg: The low-port sysctl did not take effect.
+    quiet: true

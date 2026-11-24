@@ -1,0 +1,50 @@
+---
+driver:
+  name: docker
+
+platforms:
+  - name: technitium-instance
+    image: technitium-host/almalinux10-ansible:10
+    pre_build_image: true
+    privileged: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    command: /usr/sbin/init
+    tmpfs:
+      - /run
+      - /run/lock
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/../../roles"
+  inventory:
+    group_vars:
+      all:
+        common_manage_time: false
+        common_firewall_enabled: false
+        common_require_selinux: false
+        common_ssh_allow_users:
+          - ansible
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+    verify: verify.yml
+
+verifier:
+  name: ansible
+
+scenario:
+  name: default
+  test_sequence:
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - cleanup
+    - destroy
