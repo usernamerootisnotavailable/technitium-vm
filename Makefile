@@ -44,7 +44,7 @@ $(VENV)/bin/ansible:
 	$(VENV)/bin/pip install -r requirements-dev.txt
 
 deps: $(VENV)/bin/ansible
-	$(ANSIBLE_GALAXY) collection install -r requirements.yml -p ./collections --force
+	./scripts/install-collections.sh --force
 
 lint: deps
 	$(YAMLLINT) .

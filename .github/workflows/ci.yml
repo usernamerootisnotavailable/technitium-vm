@@ -35,7 +35,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements-dev.txt
       - name: Install Ansible collections
-        run: ansible-galaxy collection install -r requirements.yml -p ./collections
+        run: ./scripts/install-collections.sh
       - name: Lint YAML
         run: yamllint .
       - name: Lint Ansible
@@ -101,7 +101,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements-dev.txt
       - name: Install Ansible collections
-        run: ansible-galaxy collection install -r requirements.yml -p ./collections
+        run: ./scripts/install-collections.sh
       - name: Build the AlmaLinux 10 test image
         run: docker build -t technitium-host/almalinux10-ansible:10 docker/dev
       - name: Run the Molecule scenario
@@ -153,7 +153,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements-dev.txt
       - name: Install Ansible collections
-        run: ansible-galaxy collection install -r requirements.yml -p ./collections
+        run: ./scripts/install-collections.sh
       - name: Run the integration test
         run: |
           set -o pipefail
