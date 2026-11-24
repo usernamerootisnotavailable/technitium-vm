@@ -78,7 +78,7 @@
 
         - name: Read the temporary scope state
           ansible.builtin.uri:
-            url: "{{ technitium_test_api_base }}/api/dhcp/scopes/get?name={{ technitium_test_scope }}"
+            url: "{{ technitium_test_api_base }}/api/dhcp/scopes/list"
             method: GET
             headers:
               Authorization: "Bearer {{ technitium_test_login.json.token }}"
@@ -89,7 +89,11 @@
         - name: Assert the temporary scope is enabled
           ansible.builtin.assert:
             that:
-              - technitium_test_scope_get.json.response.enabled | bool
+              - >-
+                technitium_test_scope_get.json.response.scopes
+                | selectattr('name', 'equalto', technitium_test_scope)
+                | selectattr('enabled')
+                | list | length > 0
             fail_msg: The temporary DHCP scope did not become enabled.
             quiet: true
 
