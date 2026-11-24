@@ -139,7 +139,45 @@
   ansible.builtin.meta: flush_handlers
 
 - name: Enable and start the service user's systemd manager
-  ansible.builtin.systemd_service:
-    name: "user@{{ technitium_uid }}.service"
-    enabled: true
-    state: started
+  block:
+    - name: Start the service user's systemd manager
+      ansible.builtin.systemd_service:
+        name: "user@{{ technitium_uid }}.service"
+        enabled: true
+        state: started
+  rescue:
+    - name: Read the failed user manager status
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - status
+          - "user@{{ technitium_uid }}.service"
+          - --no-pager
+          - --full
+      register: technitium_user_manager_status
+      changed_when: false
+      failed_when: technitium_user_manager_status.rc not in [0, 1, 2, 3, 4]
+
+    - name: Read the failed user manager journal
+      ansible.builtin.command:
+        argv:
+          - journalctl
+          - -u
+          - "user@{{ technitium_uid }}.service"
+          - -n
+          - "100"
+          - --no-pager
+      register: technitium_user_manager_journal
+      changed_when: false
+      failed_when: technitium_user_manager_journal.rc not in [0, 1]
+
+    - name: Publish user manager diagnostics
+      ansible.builtin.debug:
+        msg:
+          - "{{ technitium_user_manager_status.stdout_lines | default([]) }}"
+          - "{{ technitium_user_manager_journal.stdout_lines | default([]) }}"
+
+    - name: Explain the user manager failure
+      ansible.builtin.fail:
+        msg: >-
+          The systemd user manager failed to start. See the diagnostics above.
