@@ -3,6 +3,14 @@
 # lower unprivileged port floor. This is the one intentional host-wide
 # security trade-off for DHCP support. It is documented in
 # docs/components/technitium.md and enforced by the policy script.
+- name: Ensure the sysctl drop-in directory exists
+  ansible.builtin.file:
+    path: "{{ technitium_sysctl_file | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Lower the unprivileged port floor for rootless DNS and DHCP
   ansible.posix.sysctl:
     name: net.ipv4.ip_unprivileged_port_start
