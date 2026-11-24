@@ -9,6 +9,7 @@
   vars:
     technitium_test_api_url: "http://127.0.0.1"
     technitium_test_api_port: 5380
+    technitium_test_api_base: "{{ technitium_test_api_url }}:{{ technitium_test_api_port }}"
     technitium_test_scope: ci-dhcp
     technitium_test_server: 10.53.0.1
     technitium_test_netns: ci-dhcp-client
@@ -61,6 +62,37 @@
           ansible.builtin.set_fact:
             technitium_test_scope_created: true
 
+        - name: Explicitly enable the temporary scope
+          ansible.builtin.uri:
+            url: "{{ technitium_test_api_url }}:{{ technitium_test_api_port }}/api/dhcp/scopes/enable"
+            method: POST
+            headers:
+              Authorization: "Bearer {{ technitium_test_login.json.token }}"
+            body_format: form-urlencoded
+            body:
+              name: "{{ technitium_test_scope }}"
+            status_code: 200
+            return_content: true
+          register: technitium_test_scope_enable
+          no_log: true
+
+        - name: Read the temporary scope state
+          ansible.builtin.uri:
+            url: "{{ technitium_test_api_base }}/api/dhcp/scopes/get?name={{ technitium_test_scope }}"
+            method: GET
+            headers:
+              Authorization: "Bearer {{ technitium_test_login.json.token }}"
+            status_code: 200
+            return_content: true
+          register: technitium_test_scope_get
+
+        - name: Assert the temporary scope is enabled
+          ansible.builtin.assert:
+            that:
+              - technitium_test_scope_get.json.response.enabled | bool
+            fail_msg: The temporary DHCP scope did not become enabled.
+            quiet: true
+
         - name: Allow the scope to bind its test interface
           ansible.builtin.pause:
             seconds: 3
@@ -82,7 +114,14 @@
               - -h
               - dhcp-test
               - "{{ technitium_test_veth_client }}"
+          register: technitium_test_dhcpcd
           changed_when: true
+
+        - name: Show the DHCP client output
+          ansible.builtin.debug:
+            msg:
+              - "{{ technitium_test_dhcpcd.stdout_lines | default([]) }}"
+              - "{{ technitium_test_dhcpcd.stderr_lines | default([]) }}"
 
         - name: Read the leased address
           ansible.builtin.command:
@@ -106,7 +145,7 @@
           ansible.builtin.set_fact:
             technitium_test_lease: >-
               {{ technitium_test_addr.stdout
-                 | regex_search('inet ([0-9.]+)/', '\\1') | first | default('') }}
+                 | regex_findall('inet ([0-9.]+)/') | first | default('') }}
 
         - name: Assert a lease was allocated from the test pool
           ansible.builtin.assert:
@@ -130,11 +169,6 @@
           when: technitium_test_scope_created | default(false)
           no_log: true
 
-        - name: Read the test veth state for cleanup
-          ansible.builtin.stat:
-            path: "/sys/class/net/{{ technitium_test_veth_host }}"
-          register: technitium_test_cleanup_veth
-
         - name: Remove the test veth pair
           ansible.builtin.command:
             argv:
@@ -142,13 +176,9 @@
               - link
               - delete
               - "{{ technitium_test_veth_host }}"
-          when: technitium_test_cleanup_veth.stat.exists
-          changed_when: true
-
-        - name: Read the test namespace state for cleanup
-          ansible.builtin.stat:
-            path: "/var/run/netns/{{ technitium_test_netns }}"
-          register: technitium_test_cleanup_netns
+          register: technitium_test_cleanup_veth
+          failed_when: technitium_test_cleanup_veth.rc not in [0, 1]
+          changed_when: technitium_test_cleanup_veth.rc == 0
 
         - name: Remove the test network namespace
           ansible.builtin.command:
@@ -157,5 +187,6 @@
               - netns
               - delete
               - "{{ technitium_test_netns }}"
-          when: technitium_test_cleanup_netns.stat.exists
-          changed_when: true
+          register: technitium_test_cleanup_netns
+          failed_when: technitium_test_cleanup_netns.rc not in [0, 1]
+          changed_when: technitium_test_cleanup_netns.rc == 0
