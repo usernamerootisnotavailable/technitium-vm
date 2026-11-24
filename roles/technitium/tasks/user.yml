@@ -2,7 +2,6 @@
 - name: Create the Technitium group
   ansible.builtin.group:
     name: "{{ technitium_service_group }}"
-    system: true
     state: present
 
 - name: Create the Technitium service account
@@ -12,7 +11,6 @@
     home: "{{ technitium_user_home }}"
     create_home: true
     shell: /usr/sbin/nologin
-    system: true
     state: present
 
 - name: Read the service account identity
@@ -90,24 +88,6 @@
     - "{{ technitium_log_subdir }}"
   loop_control:
     label: "{{ item }}"
-
-- name: Ensure the user runtime directory exists now
-  ansible.builtin.file:
-    path: "/run/user/{{ technitium_uid }}"
-    state: directory
-    owner: "{{ technitium_service_user }}"
-    group: "{{ technitium_service_group }}"
-    mode: "0700"
-
-- name: Create the user runtime tmpfiles entry
-  ansible.builtin.copy:
-    content: |
-      # Managed by Ansible.
-      d /run/user/{{ technitium_uid }} 0700 {{ technitium_service_user }} {{ technitium_service_group }} -
-    dest: /etc/tmpfiles.d/technitium.conf
-    owner: root
-    group: root
-    mode: "0644"
 
 - name: Ensure the linger directory exists
   ansible.builtin.file:

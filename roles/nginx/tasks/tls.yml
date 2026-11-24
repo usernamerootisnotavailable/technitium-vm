@@ -14,14 +14,24 @@
   notify: Reload nginx
   when: nginx_tls_mode == 'selfsigned'
 
-- name: Generate the self-signed certificate
-  community.crypto.x509_certificate:
-    provider: selfsigned
-    path: "{{ nginx_tls_cert_path }}"
+- name: Generate the self-signed certificate request
+  community.crypto.openssl_csr:
+    path: "{{ nginx_tls_csr_path }}"
     privatekey_path: "{{ nginx_tls_key_path }}"
     common_name: "{{ nginx_server_name }}"
     subject_alt_name:
       - "DNS:{{ nginx_server_name }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: nginx_tls_mode == 'selfsigned'
+
+- name: Generate the self-signed certificate
+  community.crypto.x509_certificate:
+    provider: selfsigned
+    path: "{{ nginx_tls_cert_path }}"
+    csr_path: "{{ nginx_tls_csr_path }}"
+    privatekey_path: "{{ nginx_tls_key_path }}"
     owner: root
     group: root
     mode: "0644"

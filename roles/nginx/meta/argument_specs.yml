@@ -45,6 +45,9 @@ argument_specs:
       nginx_tls_cert_path:
         type: str
         description: Certificate path on the host.
+      nginx_tls_csr_path:
+        type: str
+        description: Certificate signing request path on the host.
       nginx_tls_key_path:
         type: str
         description: Private key path on the host.

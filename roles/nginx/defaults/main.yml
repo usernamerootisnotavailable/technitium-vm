@@ -10,6 +10,7 @@ nginx_allowed_cidrs: []
 nginx_client_max_body_size: "512m"
 nginx_tls_mode: selfsigned
 nginx_tls_cert_path: /etc/pki/tls/certs/technitium-console.crt
+nginx_tls_csr_path: /etc/pki/tls/private/technitium-console.csr
 nginx_tls_key_path: /etc/pki/tls/private/technitium-console.key
 nginx_tls_certificate: ""
 nginx_tls_private_key: ""
